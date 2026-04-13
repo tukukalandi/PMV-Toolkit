@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "Ticket": {
+      "title": "Ticket",
+      "description": "A support ticket raised by delivery staff.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "Email ID for confirmation" },
+        "circleUserId": { "type": "string", "description": "Circle User ID" },
+        "divisionUserId": { "type": "string", "description": "Division User ID" },
+        "deliveryStaffUserId": { "type": "string", "description": "Delivery Staff User ID" },
+        "issueType": { "type": "string", "enum": ["Login Issue", "Before Redemption", "Redemption", "After Redemption"] },
+        "subType": { "type": "string" },
+        "articleNumber": { "type": "string", "description": "Article Number/Booking ID" },
+        "mobileNumber": { "type": "string", "description": "Delivery Staff Registered Mobile Number" },
+        "eVoucherCode": { "type": "string", "description": "E Voucher Code" },
+        "applicationNumber": { "type": "string", "description": "PMV Application Number" },
+        "artisanMobileNumber": { "type": "string", "description": "Artisan Mobile Number" },
+        "description": { "type": "string", "description": "Issue Description" },
+        "fileUrl": { "type": "string", "description": "URL of the uploaded file" },
+        "ticketNumber": { "type": "string", "description": "Official ticket number assigned by admin" },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Resolved", "Closed"], "description": "Current status of the ticket" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "uid": { "type": "string", "description": "UID of the user who created the ticket" }
+      },
+      "required": ["email", "circleUserId", "divisionUserId", "deliveryStaffUserId", "issueType", "subType", "mobileNumber", "applicationNumber", "artisanMobileNumber", "description", "createdAt", "uid"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile information.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["staff", "admin"] },
+        "uid": { "type": "string" }
+      },
+      "required": ["email", "role", "uid"]
+    }
+  },
+  "firestore": {
+    "/tickets/{ticketId}": {
+      "schema": "Ticket",
+      "description": "Collection of support tickets"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and roles"
+    }
+  }
+}

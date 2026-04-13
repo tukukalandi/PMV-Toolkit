@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (UID)
+    // Fields:
+    //   - email: string (required)
+    //   - role: string (required, 'staff' or 'admin')
+    //   - uid: string (required)
+    //
+    // Collection: tickets
+    // Document ID: ticketId
+    // Fields:
+    //   - email: string (required)
+    //   - circleUserId: string (required)
+    //   - divisionUserId: string (required)
+    //   - deliveryStaffUserId: string (required)
+    //   - issueType: string (required)
+    //   - subType: string (required)
+    //   - mobileNumber: string (required)
+    //   - applicationNumber: string (required)
+    //   - artisanMobileNumber: string (required)
+    //   - description: string (required)
+    //   - createdAt: timestamp (required)
+    //   - uid: string (required)
+    //   - status: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "tukukalandi@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role', 'uid']) &&
+             data.email is string &&
+             data.role in ['staff', 'admin'] &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidTicket(data) {
+      return data.keys().hasAll(['email', 'circleUserId', 'divisionUserId', 'deliveryStaffUserId', 'issueType', 'subType', 'mobileNumber', 'applicationNumber', 'artisanMobileNumber', 'description', 'createdAt', 'uid']) &&
+             data.email is string && data.email.size() < 100 &&
+             data.circleUserId is string && data.circleUserId.size() < 50 &&
+             data.divisionUserId is string && data.divisionUserId.size() < 50 &&
+             data.deliveryStaffUserId is string && data.deliveryStaffUserId.size() < 50 &&
+             data.issueType in ['Login Issue', 'Before Redemption', 'Redemption', 'After Redemption'] &&
+             data.subType is string && data.subType.size() < 100 &&
+             data.mobileNumber is string && data.mobileNumber.size() < 20 &&
+             data.applicationNumber is string && data.applicationNumber.size() < 50 &&
+             data.artisanMobileNumber is string && data.artisanMobileNumber.size() < 20 &&
+             data.description is string && data.description.size() < 2000 &&
+             data.createdAt is timestamp &&
+             data.uid == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'staff' || isAdmin());
+      allow update: if isAuthenticated() && isAdmin() && isValidUser(request.resource.data);
+    }
+
+    match /tickets/{ticketId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidTicket(request.resource.data);
+      allow update: if isAuthenticated() && isAdmin();
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+  }
+}
