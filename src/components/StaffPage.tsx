@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,7 +6,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'motion/react';
-import { Loader2, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Upload, FileText, X } from 'lucide-react';
 
 const ISSUE_TYPES = {
   'Login Issue': [
@@ -64,6 +64,8 @@ export const StaffPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
@@ -87,17 +89,44 @@ export const StaffPage: React.FC = () => {
     selectedIssueType === 'Redemption' && 
     ['E Voucher not Available', 'E Voucher not able to scan', 'E voucher successful redemption message not coming', 'After successful redemption user not redirecting back to PMV'].includes(selectedSubType);
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        resolve(base64String);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const onSubmit = async (data: TicketFormValues) => {
     if (!user) return;
     setIsSubmitting(true);
     setError(null);
 
     try {
+      // Prepare file data if exists
+      let fileData = null;
+      if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+          throw new Error("File size exceeds 2MB limit.");
+        }
+        const base64 = await fileToBase64(file);
+        fileData = {
+          base64,
+          name: file.name,
+          type: file.type
+        };
+      }
+
       const docRef = await addDoc(collection(db, 'tickets'), {
         ...data,
         uid: user.uid,
         createdAt: serverTimestamp(),
-        status: 'Open'
+        status: 'Open',
+        hasAttachment: !!file
       });
 
       // Optional: Sync to Google Sheets via Webhook
@@ -112,7 +141,8 @@ export const StaffPage: React.FC = () => {
               ...data,
               id: docRef.id,
               status: 'Open',
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              file: fileData
             })
           });
         } catch (webhookErr) {
@@ -121,6 +151,7 @@ export const StaffPage: React.FC = () => {
       }
 
       setSubmitSuccess(true);
+      setFile(null);
     } catch (err: any) {
       console.error("Error submitting ticket:", err);
       setError(err.message || "Failed to submit ticket. Please try again.");
@@ -285,12 +316,45 @@ export const StaffPage: React.FC = () => {
 
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-700">Upload File (Max 2MB)</label>
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-indiapost-red transition-colors cursor-pointer">
-              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
-              <p className="text-xs text-gray-400 mt-1">Images or PDF (Max 2MB)</p>
-              <input type="file" className="hidden" accept="image/*,.pdf" />
-            </div>
+            {!file ? (
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-indiapost-red transition-colors cursor-pointer bg-gray-50"
+              >
+                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
+                <p className="text-xs text-gray-400 mt-1">Images or PDF (Max 2MB)</p>
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const selectedFile = e.target.files?.[0];
+                    if (selectedFile) setFile(selectedFile);
+                  }}
+                  className="hidden" 
+                  accept="image/*,.pdf" 
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-4 bg-red-50 border border-red-100 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                    <FileText className="w-6 h-6 text-indiapost-red" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{file.name}</p>
+                    <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setFile(null)}
+                  className="p-2 hover:bg-white rounded-full text-gray-400 hover:text-red-500 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {error && (
