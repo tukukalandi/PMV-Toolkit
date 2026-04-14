@@ -93,12 +93,33 @@ export const StaffPage: React.FC = () => {
     setError(null);
 
     try {
-      await addDoc(collection(db, 'tickets'), {
+      const docRef = await addDoc(collection(db, 'tickets'), {
         ...data,
         uid: user.uid,
         createdAt: serverTimestamp(),
         status: 'Open'
       });
+
+      // Optional: Sync to Google Sheets via Webhook
+      const webhookUrl = import.meta.env.VITE_GOOGLE_SHEET_WEBHOOK_URL;
+      if (webhookUrl) {
+        try {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors', // Apps Script requires no-cors for simple triggers
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...data,
+              id: docRef.id,
+              status: 'Open',
+              timestamp: new Date().toISOString()
+            })
+          });
+        } catch (webhookErr) {
+          console.error("Webhook sync failed:", webhookErr);
+        }
+      }
+
       setSubmitSuccess(true);
     } catch (err: any) {
       console.error("Error submitting ticket:", err);
