@@ -155,6 +155,16 @@ export const AdminPage: React.FC = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4">
+          <a
+            href="https://docs.google.com/spreadsheets/d/1tGqtlfNLUyadHo2yi4N6Q3KbEq8YZq3V-47U6AEEJjs/edit?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-semibold"
+          >
+            <ExternalLink className="w-4 h-4" />
+            PMV Sheet
+          </a>
+
           <button
             onClick={exportToExcel}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-semibold"
