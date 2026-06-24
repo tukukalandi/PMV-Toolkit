@@ -13,7 +13,9 @@ import { useState } from 'react';
 function Navigation() {
   const { user, login, logout, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'staff' | 'admin' | 'status'>('staff');
-  const isAdminUser = user?.email === 'tukukalandi@gmail.com';
+  
+  const adminEmails = ['tukukalandi@gmail.com', 'dnk005892@gmail.com'];
+  const isAdminUser = user?.email ? adminEmails.includes(user.email) : false;
 
   if (loading) {
     return (
