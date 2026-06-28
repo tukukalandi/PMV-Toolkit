@@ -102,6 +102,12 @@ function Navigation() {
           <StaffPage />
         )}
       </main>
+
+      <footer className="w-full bg-white border-t border-gray-200 py-4 mt-auto">
+        <div className="text-center text-sm font-medium text-gray-500">
+          Prepared by Kalandi Charan Sahoo, PA, Dhenkanal RS SO
+        </div>
+      </footer>
     </div>
   );
 }
