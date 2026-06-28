@@ -13,7 +13,7 @@ import { useState } from 'react';
 function Navigation() {
   const { user, role, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'staff' | 'admin' | 'status'>('staff');
-  const isAdminUser = user?.email === 'tukukalandi@gmail.com';
+  const isAdminUser = user?.email === 'tukukalandi@gmail.com' || user?.email === 'dnk005892@gmail.com' || role === 'admin';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
