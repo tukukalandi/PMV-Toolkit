@@ -56,7 +56,7 @@ service cloud.firestore {
     }
 
     function isValidTicket(data) {
-      return data.keys().hasAll(['email', 'circleUserId', 'divisionUserId', 'deliveryStaffUserId', 'issueType', 'subType', 'mobileNumber', 'applicationNumber', 'artisanMobileNumber', 'description', 'createdAt', 'uid']) &&
+      return data.keys().hasAll(['email', 'circleUserId', 'divisionUserId', 'deliveryStaffUserId', 'issueType', 'subType', 'mobileNumber', 'applicationNumber', 'artisanMobileNumber', 'description', 'createdAt']) &&
              data.email is string && data.email.size() < 100 &&
              data.circleUserId is string && data.circleUserId.size() < 50 &&
              data.divisionUserId is string && data.divisionUserId.size() < 50 &&
@@ -67,8 +67,7 @@ service cloud.firestore {
              data.applicationNumber is string && data.applicationNumber.size() < 50 &&
              data.artisanMobileNumber is string && data.artisanMobileNumber.size() < 20 &&
              data.description is string && data.description.size() < 2000 &&
-             data.createdAt is timestamp &&
-             data.uid == request.auth.uid;
+             data.createdAt is timestamp;
     }
 
     match /users/{userId} {
@@ -78,8 +77,8 @@ service cloud.firestore {
     }
 
     match /tickets/{ticketId} {
-      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && isValidTicket(request.resource.data);
+      allow read: if true;
+      allow create: if isValidTicket(request.resource.data);
       allow update: if isAuthenticated() && isAdmin();
       allow delete: if isAuthenticated() && isAdmin();
     }

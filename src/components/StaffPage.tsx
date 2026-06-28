@@ -102,7 +102,6 @@ export const StaffPage: React.FC = () => {
   };
 
   const onSubmit = async (data: TicketFormValues) => {
-    if (!user) return;
     setIsSubmitting(true);
     setError(null);
 
@@ -123,7 +122,6 @@ export const StaffPage: React.FC = () => {
 
       const docRef = await addDoc(collection(db, 'tickets'), {
         ...data,
-        uid: user.uid,
         createdAt: serverTimestamp(),
         status: 'Open',
         hasAttachment: !!file

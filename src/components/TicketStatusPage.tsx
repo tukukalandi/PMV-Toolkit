@@ -19,18 +19,22 @@ interface Ticket {
 }
 
 export const TicketStatusPage: React.FC = () => {
-  const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    
+    setLoading(true);
+    setHasSearched(true);
 
+    // We search by deliveryStaffUserId. (We could also search by applicationNumber but Firestore requires exact matches for a single field without composite queries easily unless we use OR).
     const q = query(
       collection(db, 'tickets'),
-      where('uid', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('deliveryStaffUserId', '==', searchQuery.trim())
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -38,21 +42,23 @@ export const TicketStatusPage: React.FC = () => {
         id: doc.id,
         ...doc.data()
       })) as Ticket[];
+      
+      // Sort locally
+      ticketData.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return timeB - timeA;
+      });
+      
       setTickets(ticketData);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching user tickets:", error);
+      console.error("Error fetching tickets:", error);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user]);
-
-  const filteredTickets = tickets.filter(ticket => 
-    ticket.issueType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.applicationNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (ticket.ticketNumber && ticket.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -64,42 +70,44 @@ export const TicketStatusPage: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-10 h-10 animate-spin text-indiapost-red" />
-      </div>
-    );
-  }
-
   return (
     <div className="w-full py-6 sm:py-10 px-2 sm:px-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+      <div className="flex flex-col mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">My Tickets</h1>
-          <p className="text-gray-500">Track the status of your raised issues.</p>
+          <p className="text-gray-500">Enter your Delivery Staff ID to track your tickets.</p>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <form onSubmit={handleSearch} className="relative w-full sm:w-96">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by App No or Ticket No..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indiapost-red outline-none w-full sm:w-64"
+            placeholder="Enter Delivery Staff ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-24 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indiapost-red outline-none w-full shadow-sm text-lg"
           />
-        </div>
+          <button 
+            type="submit"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-indiapost-red text-white font-bold rounded-lg hover:bg-red-700 transition-all"
+          >
+            Search
+          </button>
+        </form>
       </div>
 
-      <div className="space-y-4">
-        {filteredTickets.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
-            <TicketIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No tickets found.</p>
-          </div>
-        ) : (
-          filteredTickets.map((ticket) => (
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[40vh]">
+          <Loader2 className="w-10 h-10 animate-spin text-indiapost-red" />
+        </div>
+      ) : hasSearched && tickets.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
+          <TicketIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">No tickets found for Staff ID: <span className="font-bold text-gray-900">{searchQuery}</span></p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {tickets.map((ticket) => (
             <motion.div
               key={ticket.id}
               initial={{ opacity: 0, y: 10 }}
@@ -128,7 +136,7 @@ export const TicketStatusPage: React.FC = () => {
                   )}
                   <div className="flex items-center gap-1 text-xs text-gray-400">
                     <Clock className="w-3 h-3" />
-                    {ticket.createdAt?.toDate() ? format(ticket.createdAt.toDate(), 'MMM dd, yyyy HH:mm') : 'Just now'}
+                    {ticket.createdAt?.toDate ? format(ticket.createdAt.toDate(), 'MMM dd, yyyy HH:mm') : 'Just now'}
                   </div>
                 </div>
               </div>
@@ -148,9 +156,9 @@ export const TicketStatusPage: React.FC = () => {
                 </div>
               </div>
             </motion.div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
