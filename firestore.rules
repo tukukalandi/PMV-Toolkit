@@ -56,17 +56,10 @@ service cloud.firestore {
     }
 
     function isValidTicket(data) {
-      return data.keys().hasAll(['email', 'circleUserId', 'divisionUserId', 'deliveryStaffUserId', 'issueType', 'subType', 'mobileNumber', 'applicationNumber', 'artisanMobileNumber', 'description', 'createdAt']) &&
-             data.email is string && data.email.size() < 100 &&
-             data.circleUserId is string && data.circleUserId.size() < 50 &&
-             data.divisionUserId is string && data.divisionUserId.size() < 50 &&
-             data.deliveryStaffUserId is string && data.deliveryStaffUserId.size() < 50 &&
+      return data.keys().hasAll(['email', 'deliveryStaffUserId', 'issueType', 'subType', 'createdAt']) &&
+             data.email is string &&
+             data.deliveryStaffUserId is string &&
              data.issueType in ['Login Issue', 'Before Redemption', 'Redemption', 'After Redemption'] &&
-             data.subType is string && data.subType.size() < 100 &&
-             data.mobileNumber is string && data.mobileNumber.size() < 20 &&
-             data.applicationNumber is string && data.applicationNumber.size() < 50 &&
-             data.artisanMobileNumber is string && data.artisanMobileNumber.size() < 20 &&
-             data.description is string && data.description.size() < 2000 &&
              data.createdAt is timestamp;
     }
 
